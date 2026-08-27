@@ -27,7 +27,3 @@ CIRCUIT_PRESET=insecure-512 ./scripts/compile-circuits.sh
 ```
 
 That script currently points at an InterFold checkout via `INTERFOLD_REPO` and copies JSON → `web/src/circuits/` plus the Solidity verifier → `generated/verifiers/`.
-
-## Legacy
-
-`circuits/survey_input/` is an older placeholder range circuit — **not** the live Sepolia fold path.

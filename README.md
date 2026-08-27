@@ -20,7 +20,6 @@ Whitelist: InterFold must `registerE3Program` on the SurveyProgram address. See 
 ```text
 contracts/                 SurveyProgram.sol, ImageID.sol
 circuits/survey_circuits/  Noir survey + survey_fold sources
-circuits/survey_input/     legacy placeholder (not live)
 web/src/circuits/          compiled JSON used by the browser prover
 web/                       React + Vite UI
 generated/verifiers/       keccak Honk verifier from survey_fold
