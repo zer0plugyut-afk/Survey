@@ -17,6 +17,9 @@ Thumbs.db
 education-survey/.env
 deployments/sepolia.env
 
+# Local notes (not for collaborators)
+docs/
+
 # Local skill package (separate repo)
 interfold-skill/
 

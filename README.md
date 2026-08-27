@@ -13,7 +13,7 @@ Privacy-preserving education survey on **Sepolia**: respondents encrypt answers 
 | **PoseidonT3** | `0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93` (linked) |
 | **BFV** | `INSECURE_THRESHOLD_512` / `paramSet: 0` |
 
-Whitelist: InterFold must `registerE3Program` on the SurveyProgram address. See `docs/SUBMIT-PROGRAM.md`.
+Whitelist: InterFold must `registerE3Program` on the SurveyProgram address.
 
 ## Layout
 
@@ -25,7 +25,6 @@ web/                       React + Vite UI
 generated/verifiers/       keccak Honk verifier from survey_fold
 e3/program/                RISC Zero guest (ImageID source)
 scripts/                   compile / deploy / verify helpers
-docs/                      circuits, submit, steps
 deployments/               address env (no private keys)
 ```
 
@@ -37,7 +36,7 @@ deployments/               address env (no private keys)
 
 Frontend prove path: `web/src/utils/surveyFoldProof.ts` imports `web/src/circuits/*.json`.
 
-Details: `docs/CIRCUITS.md`, `circuits/README.md`.
+Details: `circuits/README.md`.
 
 ## App
 
