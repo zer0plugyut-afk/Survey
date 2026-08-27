@@ -34,6 +34,7 @@ circuits/survey_circuits_export.tgz
 cache/
 out/
 broadcast/
+*.tsbuildinfo
 
 # OS / editor
 .idea/
