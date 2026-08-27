@@ -1,0 +1,9 @@
+[package]
+name = "survey_input"
+type = "bin"
+authors = [""]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+# Wire to InterFold circuits/lib when compiling with the monorepo toolchain:
+# interfold_circuits = { path = "../../circuits/lib" }

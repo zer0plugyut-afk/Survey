@@ -1,0 +1,41 @@
+# Dependencies / build
+node_modules/
+**/node_modules/
+dist/
+out/
+cache/
+broadcast/
+*.log
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+**/PRIVATE_KEY*
+education-survey/.env
+deployments/sepolia.env
+
+# Local skill package (separate repo)
+interfold-skill/
+
+# Heavy vendor trees (not required to review program / circuits)
+education-survey/lib/
+education-survey/node_modules/
+lib/forge-std/
+
+# Circuit build artifacts / temp
+circuits/**/target/
+circuits/survey_circuits_export.tgz
+**/vk_out/
+
+# Foundry / forge noise
+cache/
+out/
+broadcast/
+
+# OS / editor
+.idea/
+.vscode/
+*.swp

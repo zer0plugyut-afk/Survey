@@ -1,0 +1,19 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+script = "script"
+solc_version = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+libraries = ["poseidon-solidity/PoseidonT3.sol:PoseidonT3:0x3333333C0A88F9BE4fd23ed0536F9B6c427e3B93"]
+remappings = [
+  "@interfold/contracts/=web/node_modules/@interfold/contracts/",
+  "@zk-kit/=web/node_modules/@zk-kit/",
+  "poseidon-solidity/=web/node_modules/poseidon-solidity/",
+  "@openzeppelin/=web/node_modules/@openzeppelin/",
+  "forge-std/=lib/forge-std/src/",
+]
+[rpc_endpoints]
+sepolia = "${HTTP_RPC_URL}"

@@ -1,0 +1,8 @@
+[package]
+name = "survey_lib"
+type = "lib"
+authors = ["Education Survey"]
+
+[dependencies]
+# Docs: pin/path to interfold circuits/lib (same pattern as examples/CRISP/circuits/lib)
+interfold_lib = { path = "../../../circuits/lib" }

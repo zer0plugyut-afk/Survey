@@ -1,0 +1,10 @@
+[package]
+name = "survey"
+type = "bin"
+version = "0.1.0"
+authors = ["Education Survey"]
+
+[dependencies]
+# Mirrors examples/CRISP/circuits/bin/crisp/Nargo.toml layout (app → interfold lib + local lib)
+interfold_lib = { path = "../../../../circuits/lib" }
+survey_lib = { path = "../../lib" }
