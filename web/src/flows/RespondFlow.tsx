@@ -33,24 +33,35 @@ export function RespondFlow() {
 
   const [step, setStep] = useState(0)
   const [maxReachable, setMaxReachable] = useState(0)
-  const [questions, setQuestions] = useState<SurveyQuestion[]>(() => resolveSurveyQuestions())
+  const [questions, setQuestions] = useState<SurveyQuestion[]>([])
   const [surveyTitle, setSurveyTitle] = useState('Course feedback')
-  const [answers, setAnswers] = useState<Record<string, number | null>>(() =>
-    emptyAnswers(resolveSurveyQuestions()),
-  )
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [answers, setAnswers] = useState<Record<string, number | null>>({})
   const [busy, setBusy] = useState(false)
   const [proveStatus, setProveStatus] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!e3FromUrl) return
+    if (!e3FromUrl) {
+      setLoadError('Missing e3 id in URL — open the researcher respond link')
+      return
+    }
     void (async () => {
-      const stored = await getSurveyByE3Id(e3FromUrl)
-      const next = resolveSurveyQuestions(stored)
-      setQuestions(next)
-      setAnswers(emptyAnswers(next))
-      if (stored?.title) setSurveyTitle(stored.title)
+      try {
+        const stored = await getSurveyByE3Id(e3FromUrl)
+        const next = resolveSurveyQuestions(stored)
+        if (!stored || next.length === 0) {
+          setLoadError('Survey not found in Supabase for this e3 id. Ask the researcher to create it again.')
+          return
+        }
+        setQuestions(next)
+        setAnswers(emptyAnswers(next))
+        setSurveyTitle(stored.title)
+        setLoadError(null)
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : String(err))
+      }
     })()
   }, [e3FromUrl])
 
@@ -93,6 +104,7 @@ export function RespondFlow() {
           publicKey,
           respondent: address,
           questionIndex,
+          kind: q.kind,
           onStatus: (msg) => setProveStatus(`${label}: ${msg}`),
         })
 
@@ -110,7 +122,7 @@ export function RespondFlow() {
           BigInt(e3FromUrl),
           proved.ciphertext,
           proved.commitment,
-          { questionIndex, proof: proved.proof },
+          { questionIndex, kind: q.kind, proof: proved.proof },
         )
       }
 
@@ -149,10 +161,16 @@ export function RespondFlow() {
               </>
             ) : null}
           </div>
+          {loadError ? <p className="note note--error">{loadError}</p> : null}
           <div className="actions">
             {!isConnected ? <ConnectKitButton /> : null}
             {isConnected && sdk.isInitialized ? (
-              <button type="button" className="btn btn--primary" onClick={() => go(1)}>
+              <button
+                type="button"
+                className="btn btn--primary"
+                disabled={Boolean(loadError) || questions.length === 0}
+                onClick={() => go(1)}
+              >
                 Continue
               </button>
             ) : null}

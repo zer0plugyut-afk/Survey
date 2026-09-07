@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
 import { ReactNode, useEffect } from 'react'
 import { ConnectKitButton } from 'connectkit'
+import { useAccount } from 'wagmi'
 import { ClipboardPlus, Home, MessagesSquare } from 'lucide-react'
-import { SEPOLIA } from '../config/sepolia'
+import { isSurveyAdmin, SEPOLIA } from '../config/sepolia'
 
 type Props = {
   children: ReactNode
@@ -11,13 +12,18 @@ type Props = {
   lede?: string
 }
 
-const NAV = [
-  { to: '/', end: true, label: 'Home', Icon: Home },
-  { to: '/create', end: false, label: 'Create survey', Icon: ClipboardPlus },
-  { to: '/respond', end: false, label: 'Respond', Icon: MessagesSquare },
-] as const
-
 export function Shell({ children, title, badge = 'Privacy-preserving · E3', lede }: Props) {
+  const { address } = useAccount()
+  const showCreate = isSurveyAdmin(address)
+
+  const nav = [
+    { to: '/', end: true, label: 'Home', Icon: Home },
+    ...(showCreate
+      ? [{ to: '/create', end: false, label: 'Create survey', Icon: ClipboardPlus } as const]
+      : []),
+    { to: '/respond', end: false, label: 'Respond', Icon: MessagesSquare },
+  ] as const
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light')
     document.documentElement.style.colorScheme = 'light'
@@ -29,7 +35,7 @@ export function Shell({ children, title, badge = 'Privacy-preserving · E3', led
       <div className="bg" aria-hidden />
       <div className="shell">
         <nav className="dock" aria-label="App navigation">
-          {NAV.map(({ to, end, label, Icon }) => (
+          {nav.map(({ to, end, label, Icon }) => (
             <NavLink
               key={to}
               to={to}

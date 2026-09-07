@@ -29,7 +29,8 @@ import userDataEncryptionCircuit from '../circuits/user_data_encryption.json'
 import surveyCircuit from '../circuits/survey.json'
 import surveyFoldCircuit from '../circuits/survey_fold.json'
 import { SEPOLIA } from '../config/sepolia'
-import { SCHEMA_ID, allowedRange, bytes32FromAddress } from './surveySchema'
+import type { SurveyQuestion } from '../data/questions'
+import { SCHEMA_ID, allowedRangeForKind, bytes32FromAddress } from './surveySchema'
 import { toHex } from './publishInput'
 
 const RECURSIVE = { verifierTarget: 'noir-recursive-no-zk' as const }
@@ -106,8 +107,9 @@ function surveyWitnessFromCircuitInputs(
   circuitInputs: CircuitInputs,
   respondent: `0x${string}`,
   questionIndex: number,
+  kind: SurveyQuestion['kind'],
 ): InputMap {
-  const [min, max] = allowedRange(questionIndex)
+  const [min, max] = allowedRangeForKind(kind)
   return {
     ct0is: asPolyArray(circuitInputs.ct0is, 'ct0is'),
     ct1is: asPolyArray(circuitInputs.ct1is, 'ct1is'),
@@ -164,9 +166,10 @@ export async function generateSurveyFoldProof(args: {
   publicKey: Uint8Array
   respondent: `0x${string}`
   questionIndex: number
+  kind: SurveyQuestion['kind']
   onStatus?: StatusFn
 }): Promise<SurveyFoldProofResult> {
-  const { value, publicKey, respondent, questionIndex, onStatus } = args
+  const { value, publicKey, respondent, questionIndex, kind, onStatus } = args
   const preset = SEPOLIA.thresholdBfvParamsPresetName
   if (
     preset !== 'SECURE_THRESHOLD_8192' &&
@@ -242,7 +245,7 @@ export async function generateSurveyFoldProof(args: {
     const udeArtifacts = await recursiveArtifacts(udeBackend, udeProof.proof, udeProof.publicInputs.length)
 
     status('Proving survey (range + commitments)…')
-    const surveyInputs = surveyWitnessFromCircuitInputs(circuitInputs, respondent, questionIndex)
+    const surveyInputs = surveyWitnessFromCircuitInputs(circuitInputs, respondent, questionIndex, kind)
     const { witness: surveyWitness } = await executeCircuit(
       surveyCircuit as CompiledCircuit,
       surveyInputs,
@@ -270,7 +273,7 @@ export async function generateSurveyFoldProof(args: {
     }
 
     status('Proving survey_fold (recursive verify + keccak EVM proof)…')
-    const [min, max] = allowedRange(questionIndex)
+    const [min, max] = allowedRangeForKind(kind)
     if (udeArtifacts.vkAsFields.length !== UH_VK_FIELDS || surveyArtifacts.vkAsFields.length !== UH_VK_FIELDS) {
       throw new Error(`UltraHonkVerificationKey must be ${UH_VK_FIELDS} fields`)
     }

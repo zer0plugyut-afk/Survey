@@ -1517,8 +1517,64 @@
   color: var(--muted);
 }
 
+.q-editor__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .q-editor__head .soft-select {
   min-width: 148px;
+}
+
+.q-editor__footer {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.survey-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.survey-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.survey-picker__card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--canvas) 45%, white);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  font: inherit;
+  color: inherit;
+}
+
+.survey-picker__card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.survey-picker__title {
+  font-weight: 650;
+  font-size: 1rem;
+}
+
+.survey-picker__meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, monospace);
 }
 
 .field-row {

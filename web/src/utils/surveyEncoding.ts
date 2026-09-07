@@ -5,17 +5,19 @@
  * - docs.theinterfold.com/CRISP/introduction (encode ballot → FHE sum → decodeTally)
  * - examples/CRISP/packages/crisp-sdk/src/encoding.ts (`encodeVote` / `decodeTally`)
  *
- * Layout: first MAX_MSG_NON_ZERO_COEFFS coeffs hold binary segments (one per question),
+ * Layout: first MAX_MSG_NON_ZERO_COEFFS coeffs hold binary segments (one per packing slot),
  * MSB-first per segment, then zero-pad to BFV degree. After sum-all + decrypt, decode
- * yields one total per question.
+ * yields one total per slot. Always pack with PACKING_QUESTION_COUNT so every round matches
+ * the compiled circuit / SurveyProgram.QUESTION_COUNT.
  */
 import { hexToBytes, type Hex } from 'viem'
-import { SURVEY_QUESTIONS } from '../data/questions'
+import { PACKING_QUESTION_COUNT } from '../data/questions'
 
 /** Must stay aligned with InterFold / CRISP `MAX_MSG_NON_ZERO_COEFFS`. */
 export const MAX_MSG_NON_ZERO_COEFFS = 100
 
-export const QUESTION_COUNT = SURVEY_QUESTIONS.length
+/** Fixed packing width — do not derive from a survey's visible question count. */
+export const QUESTION_COUNT = PACKING_QUESTION_COUNT
 
 export function segmentSize(numQuestions: number = QUESTION_COUNT): number {
   return Math.floor(MAX_MSG_NON_ZERO_COEFFS / numQuestions)
@@ -32,21 +34,22 @@ function toBinary(value: number): string {
 
 /**
  * Encode one survey answer as a sparse CRISP ballot vector (length = BFV degree).
- * Only `questionIndex` is non-zero; other question segments are zero.
+ * Only `questionIndex` is non-zero; other packing slots are zero.
  */
 export function encodeSurveyAnswer(args: {
   questionIndex: number
   answer: number | bigint
   degree: number
+  /** @deprecated Ignored — packing always uses QUESTION_COUNT. */
   numQuestions?: number
 }): BigUint64Array {
-  const numQuestions = args.numQuestions ?? QUESTION_COUNT
+  const numQuestions = QUESTION_COUNT
   const questionIndex = args.questionIndex
   const answer = Number(args.answer)
   const { degree } = args
 
   if (!Number.isInteger(questionIndex) || questionIndex < 0 || questionIndex >= numQuestions) {
-    throw new Error(`questionIndex ${questionIndex} out of range for ${numQuestions} questions`)
+    throw new Error(`questionIndex ${questionIndex} out of range for ${numQuestions} packing slots`)
   }
   if (degree < MAX_MSG_NON_ZERO_COEFFS) {
     throw new Error(`BFV degree (${degree}) must be >= MAX_MSG_NON_ZERO_COEFFS (${MAX_MSG_NON_ZERO_COEFFS})`)
@@ -89,7 +92,8 @@ export function decodeBytesToBigInts(data: Uint8Array): bigint[] {
 }
 
 /**
- * Decode committee plaintext into per-question tallies (CRISP `decodeTally`).
+ * Decode committee plaintext into per-slot tallies (CRISP `decodeTally`).
+ * Defaults to full packing width; callers usually slice to the survey's visible questions.
  */
 export function decodeSurveyTally(
   plaintext: string | number[] | bigint[],
@@ -113,9 +117,11 @@ export function decodeSurveyTally(
     )
   }
 
-  const seg = segmentSize(numQuestions)
+  // Decode with fixed packing width, then return the leading `numQuestions` tallies.
+  const pack = QUESTION_COUNT
+  const seg = segmentSize(pack)
   const results: bigint[] = []
-  for (let q = 0; q < numQuestions; q++) {
+  for (let q = 0; q < pack; q++) {
     const start = q * seg
     let value = 0n
     for (let i = 0; i < seg; i++) {
@@ -123,5 +129,5 @@ export function decodeSurveyTally(
     }
     results.push(value)
   }
-  return results
+  return results.slice(0, numQuestions)
 }

@@ -30,7 +30,8 @@ contract SurveyProgram is IE3Program {
     bytes32 public constant ENCRYPTION_SCHEME_ID = keccak256("fhe.rs:BFV");
     bytes32 public constant SCHEMA_ID = keccak256("education-survey-v1");
     uint8 public constant TREE_DEPTH = 20;
-    uint256 public constant QUESTION_COUNT = 5;
+    /// @dev Max question slots (CRISP packing + circuit). Surveys may use fewer (2–20).
+    uint256 public constant QUESTION_COUNT = 20;
     uint256 public constant LIKERT_MIN = 1;
     uint256 public constant LIKERT_MAX = 5;
     uint256 public constant YESNO_MIN = 0;
@@ -71,6 +72,7 @@ contract SurveyProgram is IE3Program {
     error InvalidComputeContext();
     error ZeroAddress();
     error RespondentMismatch();
+    error InvalidAnswerRange();
 
     event SurveyRoundInitialized(uint256 indexed e3Id, bytes32 paramsHash, bytes32 schemaId);
     event SurveyAnswerPublished(
@@ -121,8 +123,10 @@ contract SurveyProgram is IE3Program {
      * @notice Submit one encrypted survey answer with a Honk proof of encryption + allowed value.
      * @param e3Id Round id.
      * @param data abi.encode(bytes proof, address respondent, uint256 questionIndex,
-     *             bytes32 ciphertextCommitment, bytes ciphertext)
+     *             uint256 minValue, uint256 maxValue, bytes32 ciphertextCommitment, bytes ciphertext)
      * @dev `respondent` in `data` must equal `msg.sender` (sybil bind for v1).
+     *      `(minValue, maxValue)` must be a supported pair: Likert `(1,5)` or yes/no `(0,1)`.
+     *      Any slot `0 .. QUESTION_COUNT-1` may use either pair (creator chooses per question).
      */
     function publishInput(uint256 e3Id, bytes memory data) external {
         if (paramsHashes[e3Id] == bytes32(0)) revert E3DoesNotExist();
@@ -140,15 +144,16 @@ contract SurveyProgram is IE3Program {
             bytes memory proof,
             address respondent,
             uint256 questionIndex,
+            uint256 minValue,
+            uint256 maxValue,
             bytes32 ciphertextCommitment,
             bytes memory ciphertext
-        ) = abi.decode(data, (bytes, address, uint256, bytes32, bytes));
+        ) = abi.decode(data, (bytes, address, uint256, uint256, uint256, bytes32, bytes));
 
         if (respondent != msg.sender) revert RespondentMismatch();
         if (ciphertext.length == 0 || ciphertextCommitment == bytes32(0)) revert EmptyInputData();
         if (questionIndex >= QUESTION_COUNT) revert InvalidQuestionIndex();
-
-        (uint256 minValue, uint256 maxValue) = allowedRange(questionIndex);
+        if (!isAllowedRange(minValue, maxValue)) revert InvalidAnswerRange();
 
         bytes32[] memory publicInputs = new bytes32[](PI_LENGTH);
         publicInputs[PI_SCHEMA] = SCHEMA_ID;
@@ -210,13 +215,17 @@ contract SurveyProgram is IE3Program {
         return true;
     }
 
-    /// @notice Allowed plaintext range for a question index (q0–q3 Likert, q4 yes/no).
-    function allowedRange(uint256 questionIndex) public pure returns (uint256 minValue, uint256 maxValue) {
-        if (questionIndex >= QUESTION_COUNT) revert InvalidQuestionIndex();
-        if (questionIndex == 4) {
-            return (YESNO_MIN, YESNO_MAX);
-        }
-        return (LIKERT_MIN, LIKERT_MAX);
+    /// @notice True if `(min,max)` is Likert `(1,5)` or yes/no `(0,1)`.
+    function isAllowedRange(uint256 minValue, uint256 maxValue) public pure returns (bool) {
+        return (minValue == LIKERT_MIN && maxValue == LIKERT_MAX)
+            || (minValue == YESNO_MIN && maxValue == YESNO_MAX);
+    }
+
+    /// @notice Range for a question kind: `0` = Likert 1–5, `1` = yes/no 0–1.
+    function allowedRangeForKind(uint8 kind) public pure returns (uint256 minValue, uint256 maxValue) {
+        if (kind == 0) return (LIKERT_MIN, LIKERT_MAX);
+        if (kind == 1) return (YESNO_MIN, YESNO_MAX);
+        revert InvalidAnswerRange();
     }
 
     function inputRootOf(uint256 e3Id) external view returns (bytes32) {

@@ -14,22 +14,19 @@ import { QuestionEditor } from '../components/QuestionEditor'
 import { SEPOLIA, shortAddr } from '../config/sepolia'
 import {
   SCHEMA_VERSION,
-  SURVEY_QUESTIONS,
-  blankCustomQuestions,
-  cloneDraftQuestions,
-  customQuestionsReady,
+  MAX_SURVEY_QUESTIONS,
+  blankQuestions,
+  questionsReady,
   type SurveyQuestion,
 } from '../data/questions'
 import { useSurveySdk } from '../providers/InterfoldSdkProvider'
-import { schemaHash } from '../utils/e3'
-import { buildAggregates, QUESTIONS_PER_RESPONSE, type SurveyAggregates } from '../utils/surveyResults'
+import { buildAggregates, type SurveyAggregates } from '../utils/surveyResults'
 import { readSurveyInputCount } from '../utils/surveyProgram'
 import {
-  DEMO_DRAFT_ID,
-  ensureDemoDraft,
   getSurvey,
   getSurveyByE3Id,
   listSurveys,
+  newSurveyId,
   putSurvey,
   respondPathFor,
   windowLabelFrom,
@@ -63,11 +60,10 @@ export function CreateSurveyFlow() {
   const [title, setTitle] = useState('Spring 2026 course feedback')
   const [windowValue, setWindowValue] = useState(48)
   const [windowUnit, setWindowUnit] = useState<'minutes' | 'hours'>('hours')
-  const [questionSource, setQuestionSource] = useState<'draft' | 'custom' | null>(null)
-  const [customQuestions, setCustomQuestions] = useState<SurveyQuestion[]>(() => blankCustomQuestions())
+  const [questions, setQuestions] = useState<SurveyQuestion[]>(() => blankQuestions(8))
   const windowSeconds = windowUnit === 'hours' ? windowValue * 3600 : windowValue * 60
   const windowLabel = windowLabelFrom(windowValue, windowUnit)
-  const [surveyId, setSurveyId] = useState(DEMO_DRAFT_ID)
+  const [surveyId, setSurveyId] = useState(() => newSurveyId())
   const [e3Id, setE3Id] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [publicKey, setPublicKey] = useState<`0x${string}` | null>(null)
@@ -84,14 +80,17 @@ export function CreateSurveyFlow() {
   }
 
   const refreshSaved = useCallback(async () => {
-    await ensureDemoDraft()
-    setSaved(await listSurveys())
+    try {
+      setSaved(await listSurveys())
+    } catch (err) {
+      console.warn('listSurveys', err)
+    }
   }, [])
 
   const persist = useCallback(
     async (patch: Partial<StoredSurvey> & { id?: string }) => {
       const id = patch.id ?? (patch.e3Id ? `e3-${patch.e3Id}` : surveyId)
-      const prev = (await getSurvey(id)) ?? (await getSurvey(surveyId))
+      const prev = (await getSurvey(id).catch(() => undefined)) ?? (await getSurvey(surveyId).catch(() => undefined))
       const base: StoredSurvey = prev ?? {
         id,
         e3Id: null,
@@ -101,9 +100,8 @@ export function CreateSurveyFlow() {
         windowSeconds,
         windowLabel,
         schemaVersion: SCHEMA_VERSION,
-        questionSource: questionSource ?? undefined,
-        questions: questionSource === 'custom' ? customQuestions : undefined,
-        status: 'draft',
+        questions,
+        status: 'ready',
         txHash: null,
         publicKey: null,
         plaintextSum: null,
@@ -112,14 +110,6 @@ export function CreateSurveyFlow() {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }
-      const resolvedSource = patch.questionSource ?? questionSource ?? base.questionSource
-      const resolvedQuestions =
-        patch.questions ??
-        (resolvedSource === 'custom'
-          ? customQuestions
-          : resolvedSource === 'draft'
-            ? undefined
-            : base.questions)
       const next: StoredSurvey = {
         ...base,
         ...patch,
@@ -129,8 +119,7 @@ export function CreateSurveyFlow() {
         windowUnit: patch.windowUnit ?? windowUnit,
         windowSeconds: patch.windowSeconds ?? windowSeconds,
         windowLabel: patch.windowLabel ?? windowLabel,
-        questionSource: resolvedSource ?? undefined,
-        questions: resolvedSource === 'custom' ? resolvedQuestions : undefined,
+        questions: patch.questions ?? questions,
         schemaVersion: SCHEMA_VERSION,
         updatedAt: Date.now(),
       }
@@ -139,17 +128,7 @@ export function CreateSurveyFlow() {
       await refreshSaved()
       return next
     },
-    [
-      surveyId,
-      title,
-      windowValue,
-      windowUnit,
-      windowSeconds,
-      windowLabel,
-      questionSource,
-      customQuestions,
-      refreshSaved,
-    ],
+    [surveyId, title, windowValue, windowUnit, windowSeconds, windowLabel, questions, refreshSaved],
   )
 
   const hydrateFromStored = useCallback((s: StoredSurvey) => {
@@ -157,11 +136,8 @@ export function CreateSurveyFlow() {
     setTitle(s.title)
     setWindowValue(s.windowValue)
     setWindowUnit(s.windowUnit)
-    setQuestionSource(s.questionSource ?? null)
-    setCustomQuestions(
-      s.questionSource === 'custom' && s.questions?.length === 5
-        ? s.questions.map((q) => ({ ...q }))
-        : blankCustomQuestions(),
+    setQuestions(
+      s.questions?.length ? s.questions.map((q) => ({ ...q })) : blankQuestions(8),
     )
     setE3Id(s.e3Id)
     setTxHash(s.txHash)
@@ -170,9 +146,10 @@ export function CreateSurveyFlow() {
       buildAggregates({
         plaintextOutput: s.plaintextHex,
         inputCount: s.inputCount,
+        questions: s.questions ?? [],
       }),
     )
-    if (s.plaintextSum != null) setResultsStatus('Plaintext output loaded from local store')
+    if (s.plaintextSum != null) setResultsStatus('Plaintext output loaded from Supabase')
     if (s.e3Id) {
       const next = s.plaintextSum != null ? 4 : 3
       setStep(next)
@@ -196,10 +173,7 @@ export function CreateSurveyFlow() {
         }
         setE3Id(fromUrl)
         go(3)
-        return
       }
-      const demo = await ensureDemoDraft()
-      hydrateFromStored(demo)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once
   }, [])
@@ -222,6 +196,7 @@ export function CreateSurveyFlow() {
       const next = buildAggregates({
         plaintextOutput: e3.plaintextOutput,
         inputCount,
+        questions: questions,
       })
       setAggregates(next)
 
@@ -268,7 +243,7 @@ export function CreateSurveyFlow() {
       console.warn('refreshOnChainResults', err)
       setResultsStatus('Could not read E3 state yet — will retry when events arrive')
     }
-  }, [sdk, e3Id, persist, publicKey])
+  }, [sdk, e3Id, persist, publicKey, questions])
 
   useEffect(() => {
     if (!sdk.isInitialized) return
@@ -322,7 +297,10 @@ export function CreateSurveyFlow() {
       const id = event.data?.e3Id?.toString()
       if (id && e3Id && id !== e3Id) return
       if (id && !e3Id) setE3Id(id)
-      const sum = buildAggregates({ plaintextOutput: event.data?.plaintextOutput }).aggregateSum
+      const sum = buildAggregates({
+        plaintextOutput: event.data?.plaintextOutput,
+        questions: questions,
+      }).aggregateSum
       setResultsStatus('PlaintextOutputPublished received')
       const liveId = id ?? e3Id
       if (liveId) {
@@ -359,6 +337,7 @@ export function CreateSurveyFlow() {
     windowLabel,
     persist,
     refreshOnChainResults,
+    questions,
   ])
 
   useEffect(() => {
@@ -375,18 +354,18 @@ export function CreateSurveyFlow() {
     try {
       if (!sdk.sdk) throw new Error('SDK not initialized — connect wallet on Sepolia')
       if (chainId !== SEPOLIA.chainId) throw new Error('Switch MetaMask to Sepolia')
+      if (!questionsReady(questions)) throw new Error('Add at least two questions with prompts')
 
       await persist({
         id: surveyId,
         e3Id: null,
-        status: 'draft',
+        status: 'ready',
         title,
         windowValue,
         windowUnit,
         windowSeconds,
         windowLabel,
-        questionSource: questionSource ?? undefined,
-        questions: questionSource === 'custom' ? customQuestions : undefined,
+        questions,
       })
 
       const publicClient = sdk.sdk.getPublicClient()
@@ -487,17 +466,17 @@ export function CreateSurveyFlow() {
         <StepPanel
           kicker="Step 2 · Configure"
           title="Survey parameters"
-          lede="Pick the built-in draft questions or write your own. Still five integer answers for SurveyProgram. Title and input window apply either way."
+          lede={`Write ${questions.length} prompts (2–${MAX_SURVEY_QUESTIONS}). Any question can be Likert 1–5 or yes/no. Metadata is saved to Supabase so respond links work for anyone.`}
         >
           {saved.length > 0 ? (
             <div className="status-box">
-              <strong>Saved locally</strong>
+              <strong>Saved surveys</strong>
               <ul className="saved-list">
                 {saved.map((s) => (
                   <li key={s.id}>
                     <button type="button" className="linkish" onClick={() => hydrateFromStored(s)}>
                       {s.title}
-                      {s.e3Id ? ` · e3 ${s.e3Id}` : ' · draft'}
+                      {s.e3Id ? ` · e3 ${s.e3Id}` : ` · ${s.status}`}
                       {s.status === 'complete' ? ' · results' : ''}
                     </button>
                   </li>
@@ -538,68 +517,7 @@ export function CreateSurveyFlow() {
           <div className="field" style={{ marginBottom: 8 }}>
             <label>Questions</label>
           </div>
-          <div className="source-picker" role="radiogroup" aria-label="Question source">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={questionSource === 'draft'}
-              className={`source-card${questionSource === 'draft' ? ' is-selected' : ''}`}
-              onClick={() => setQuestionSource('draft')}
-            >
-              <span className="source-card__kicker">Option A</span>
-              <span className="source-card__title">Use draft questions</span>
-              <span className="source-card__body">
-                Course-feedback template the app ships with — five Likert / yes-no items, ready for demos.
-              </span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={questionSource === 'custom'}
-              className={`source-card${questionSource === 'custom' ? ' is-selected' : ''}`}
-              onClick={() => {
-                setQuestionSource('custom')
-                setCustomQuestions((prev) =>
-                  prev.some((q) => q.prompt.trim()) ? prev : blankCustomQuestions(),
-                )
-              }}
-            >
-              <span className="source-card__kicker">Option B</span>
-              <span className="source-card__title">Create my own</span>
-              <span className="source-card__body">
-                Write five prompts yourself. Same on-chain shape (integers only) — you choose the wording.
-              </span>
-            </button>
-          </div>
-
-          {questionSource === 'draft' ? (
-            <>
-              <div className="status-box">
-                <strong>Schema · {SCHEMA_VERSION}</strong>
-                {SURVEY_QUESTIONS.length} questions · hash {shortAddr(schemaHash())}
-              </div>
-              <ul className="draft-preview">
-                {cloneDraftQuestions().map((q, i) => (
-                  <li key={q.id}>
-                    <span className="draft-preview__meta">
-                      Q{i + 1} · {q.kind === 'likert' ? 'Likert 1–5' : 'Yes / no'}
-                    </span>
-                    {q.prompt}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-
-          {questionSource === 'custom' ? (
-            <QuestionEditor questions={customQuestions} onChange={setCustomQuestions} />
-          ) : null}
-
-          {!questionSource ? (
-            <p className="note" style={{ marginTop: 0 }}>
-              Choose draft questions or create your own to continue.
-            </p>
-          ) : null}
+          <QuestionEditor questions={questions} onChange={setQuestions} />
 
           <div className="actions">
             <button type="button" className="btn btn--ghost" onClick={() => go(0)}>
@@ -608,22 +526,18 @@ export function CreateSurveyFlow() {
             <button
               type="button"
               className="btn btn--primary"
-              disabled={
-                !questionSource ||
-                (questionSource === 'custom' && !customQuestionsReady(customQuestions))
-              }
+              disabled={!questionsReady(questions)}
               onClick={() => {
                 void persist({
-                  id: surveyId.startsWith('e3-') ? DEMO_DRAFT_ID : surveyId,
+                  id: surveyId.startsWith('e3-') ? newSurveyId() : surveyId,
                   e3Id: null,
-                  status: 'draft',
+                  status: 'ready',
                   title,
                   windowValue,
                   windowUnit,
                   windowSeconds,
                   windowLabel,
-                  questionSource: questionSource!,
-                  questions: questionSource === 'custom' ? customQuestions : undefined,
+                  questions,
                 }).then(() => go(2))
               }}
             >
@@ -667,7 +581,7 @@ export function CreateSurveyFlow() {
         <StepPanel
           kicker="Step 4 · Collect"
           title={publicKey ? 'Committee ready' : 'Waiting for committee'}
-          lede="Share the respond link once the committee publishes a public key. Sepolia DKG is slower than local. Round metadata is stored locally."
+          lede="Share the respond link once the committee publishes a public key. Sepolia DKG is slower than local. Round metadata is stored in Supabase."
         >
           <div className="gauge-row">
             <div className="gauge">
@@ -768,9 +682,9 @@ export function CreateSurveyFlow() {
           )}
           <div className="status-box">
             <strong>How to read this</strong>
-            Each respondent publishes {QUESTIONS_PER_RESPONSE} ciphertexts (one per question), each packed
-            into that question&apos;s binary segment. Homomorphic sum keeps slots separate — decrypt yields
-            [Q0, Q1, Q2, Q3, Q4].
+            Each respondent publishes {questions.length} ciphertext(s) (one per question), each packed
+            into that question&apos;s binary segment inside a fixed {MAX_SURVEY_QUESTIONS}-slot layout.
+            Homomorphic sum keeps slots separate — decrypt yields one tally per question.
           </div>
           {aggregates.plaintextHex ? (
             <div className="status-box">

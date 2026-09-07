@@ -1,4 +1,8 @@
-import { SurveyQuestion } from '../data/questions'
+import {
+  MAX_SURVEY_QUESTIONS,
+  MIN_SURVEY_QUESTIONS,
+  type SurveyQuestion,
+} from '../data/questions'
 import { SoftSelect } from './SoftSelect'
 
 type Props = {
@@ -24,25 +28,56 @@ export function QuestionEditor({ questions, onChange }: Props) {
     )
   }
 
+  const addQuestion = () => {
+    if (questions.length >= MAX_SURVEY_QUESTIONS) return
+    const n = questions.length + 1
+    onChange([
+      ...questions,
+      {
+        id: `q${n}-${Date.now()}`,
+        prompt: '',
+        hint: '1 = low · 5 = high',
+        kind: 'likert',
+      },
+    ])
+  }
+
+  const removeQuestion = (index: number) => {
+    if (questions.length <= MIN_SURVEY_QUESTIONS) return
+    onChange(questions.filter((_, i) => i !== index))
+  }
+
   return (
     <div className="q-editor">
       <p className="q-editor__note">
-        Keep <strong>5 integer questions</strong> (Likert 1–5 or yes/no). That matches the live SurveyProgram input
-        layout on Sepolia.
+        Add <strong>{MIN_SURVEY_QUESTIONS}–{MAX_SURVEY_QUESTIONS}</strong> integer questions
+        (Likert 1–5 or yes/no). Packing uses a fixed {MAX_SURVEY_QUESTIONS}-slot circuit layout —
+        unused slots stay zero.
       </p>
       {questions.map((q, index) => (
         <div className="q-editor__card" key={q.id}>
           <div className="q-editor__head">
             <span>Question {index + 1}</span>
-            <SoftSelect
-              aria-label={`Type for question ${index + 1}`}
-              value={q.kind}
-              options={[
-                { value: 'likert', label: 'Likert 1–5' },
-                { value: 'yesno', label: 'Yes / no' },
-              ]}
-              onChange={(kind) => update(index, { kind })}
-            />
+            <div className="q-editor__head-actions">
+              <SoftSelect
+                aria-label={`Type for question ${index + 1}`}
+                value={q.kind}
+                options={[
+                  { value: 'likert', label: 'Likert 1–5' },
+                  { value: 'yesno', label: 'Yes / no' },
+                ]}
+                onChange={(kind) => update(index, { kind })}
+              />
+              <button
+                type="button"
+                className="btn btn--ghost"
+                disabled={questions.length <= MIN_SURVEY_QUESTIONS}
+                onClick={() => removeQuestion(index)}
+                aria-label={`Remove question ${index + 1}`}
+              >
+                Remove
+              </button>
+            </div>
           </div>
           <div className="field">
             <label htmlFor={`q-prompt-${q.id}`}>Prompt</label>
@@ -64,6 +99,16 @@ export function QuestionEditor({ questions, onChange }: Props) {
           </div>
         </div>
       ))}
+      <div className="q-editor__footer">
+        <button
+          type="button"
+          className="btn btn--ghost"
+          disabled={questions.length >= MAX_SURVEY_QUESTIONS}
+          onClick={addQuestion}
+        >
+          Add question ({questions.length}/{MAX_SURVEY_QUESTIONS})
+        </button>
+      </div>
     </div>
   )
 }

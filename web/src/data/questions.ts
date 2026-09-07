@@ -5,64 +5,39 @@ export type SurveyQuestion =
 /** Must stay aligned with on-chain SCHEMA_ID = keccak256("education-survey-v1") */
 export const SCHEMA_VERSION = 'education-survey-v1'
 
-/** V1 education schema — integer answers only (FHE-friendly). */
-export const SURVEY_QUESTIONS: SurveyQuestion[] = [
-  {
-    id: 'satisfaction',
-    prompt: 'Overall, how satisfied are you with this course?',
-    hint: '1 = very dissatisfied · 5 = very satisfied',
-    kind: 'likert',
-  },
-  {
-    id: 'clarity',
-    prompt: 'How clear were the learning objectives and materials?',
-    hint: '1 = unclear · 5 = very clear',
-    kind: 'likert',
-  },
-  {
-    id: 'workload',
-    prompt: 'How manageable was the workload?',
-    hint: '1 = unmanageable · 5 = very manageable',
-    kind: 'likert',
-  },
-  {
-    id: 'support',
-    prompt: 'How supported did you feel by instructors / TAs?',
-    hint: '1 = unsupported · 5 = very supported',
-    kind: 'likert',
-  },
-  {
-    id: 'recommend',
-    prompt: 'Would you recommend this course to a peer?',
-    hint: 'Yes = 1 · No = 0',
-    kind: 'yesno',
-  },
-]
+/**
+ * Fixed CRISP packing / circuit width (must match SurveyProgram.QUESTION_COUNT).
+ * Creators pick 2–MAX_SURVEY_QUESTIONS prompts; unused packing slots stay zero.
+ */
+export const PACKING_QUESTION_COUNT = 20
+export const MIN_SURVEY_QUESTIONS = 2
+export const MAX_SURVEY_QUESTIONS = PACKING_QUESTION_COUNT
 
-export function blankCustomQuestions(): SurveyQuestion[] {
-  return Array.from({ length: 5 }, (_, i) => ({
+/** Empty editor rows for the create form (default 8). */
+export function blankQuestions(count: number = 8): SurveyQuestion[] {
+  const n = Math.min(MAX_SURVEY_QUESTIONS, Math.max(MIN_SURVEY_QUESTIONS, count))
+  return Array.from({ length: n }, (_, i) => ({
     id: `q${i + 1}`,
     prompt: '',
-    hint: i === 4 ? 'Yes = 1 · No = 0' : '1 = low · 5 = high',
-    kind: (i === 4 ? 'yesno' : 'likert') as SurveyQuestion['kind'],
+    hint: '1 = low · 5 = high',
+    kind: 'likert' as const,
   }))
 }
 
-export function cloneDraftQuestions(): SurveyQuestion[] {
-  return SURVEY_QUESTIONS.map((q) => ({ ...q }))
+function isValidQuestionCount(n: number): boolean {
+  return Number.isInteger(n) && n >= MIN_SURVEY_QUESTIONS && n <= MAX_SURVEY_QUESTIONS
 }
 
-/** Prefer stored custom prompts; otherwise the built-in draft schema. */
+/** Questions from a stored survey row (required for respond). */
 export function resolveSurveyQuestions(stored?: {
-  questionSource?: 'draft' | 'custom'
   questions?: SurveyQuestion[]
 }): SurveyQuestion[] {
-  if (stored?.questionSource === 'custom' && stored.questions?.length === 5) {
+  if (stored?.questions && isValidQuestionCount(stored.questions.length)) {
     return stored.questions.map((q) => ({ ...q }))
   }
-  return cloneDraftQuestions()
+  return []
 }
 
-export function customQuestionsReady(questions: SurveyQuestion[]): boolean {
-  return questions.length === 5 && questions.every((q) => q.prompt.trim().length > 0)
+export function questionsReady(questions: SurveyQuestion[]): boolean {
+  return isValidQuestionCount(questions.length) && questions.every((q) => q.prompt.trim().length > 0)
 }

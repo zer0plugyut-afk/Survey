@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ConnectKitButton } from 'connectkit'
+import { useAccount } from 'wagmi'
 import { ClipboardPlus, EyeOff, Lock, MessagesSquare, Shield, Sparkles, Users } from 'lucide-react'
-import { SEPOLIA, shortAddr } from '../config/sepolia'
+import { isSurveyAdmin, SEPOLIA, shortAddr } from '../config/sepolia'
 
 function useSoftTheme() {
   useEffect(() => {
@@ -14,6 +15,8 @@ function useSoftTheme() {
 
 export function HomePage() {
   useSoftTheme()
+  const { address } = useAccount()
+  const canCreate = isSurveyAdmin(address)
 
   return (
     <>
@@ -25,7 +28,7 @@ export function HomePage() {
             <span className="landing-nav__name">InterFold Survey</span>
           </Link>
           <nav className="landing-nav__links" aria-label="Primary">
-            <Link to="/create">Create</Link>
+            {canCreate ? <Link to="/create">Create</Link> : null}
             <Link to="/respond">Respond</Link>
           </nav>
           <div className="landing-nav__actions">
@@ -43,15 +46,24 @@ export function HomePage() {
               committee, publish class totals only.
             </p>
             <div className="landing-hero__cta">
-              <Link className="btn btn--primary home-cta__btn" to="/create">
-                <ClipboardPlus size={16} strokeWidth={2} aria-hidden />
-                Create a survey
-              </Link>
+              {canCreate ? (
+                <Link className="btn btn--primary home-cta__btn" to="/create">
+                  <ClipboardPlus size={16} strokeWidth={2} aria-hidden />
+                  Create a survey
+                </Link>
+              ) : null}
               <Link className="btn home-cta__btn" to="/respond">
                 <MessagesSquare size={16} strokeWidth={2} aria-hidden />
                 Answer a survey
               </Link>
             </div>
+            {!canCreate ? (
+              <p className="landing-hero__lede" style={{ marginTop: '1rem', fontSize: '0.95rem' }}>
+                Creating rounds is limited to the demo researcher wallet
+                {address ? ` (connected ${shortAddr(address)})` : ''}. Anyone can respond once a survey link is
+                shared.
+              </p>
+            ) : null}
           </section>
 
           <section className="landing-section">

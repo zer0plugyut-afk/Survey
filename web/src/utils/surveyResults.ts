@@ -1,7 +1,5 @@
-import { SURVEY_QUESTIONS } from '../data/questions'
-import { decodeSurveyTally, QUESTION_COUNT } from './surveyEncoding'
-
-const QUESTIONS_PER_RESPONSE = QUESTION_COUNT
+import type { SurveyQuestion } from '../data/questions'
+import { decodeSurveyTally, QUESTION_COUNT as PACKING_SLOTS } from './surveyEncoding'
 
 export type QuestionTally = {
   index: number
@@ -14,44 +12,44 @@ export type QuestionTally = {
 
 export type SurveyAggregates = {
   plaintextHex: string | null
-  /** Per-question tallies from CRISP-style decode. */
   questionTallies: QuestionTally[]
-  /** Sum of all question tallies (convenience). */
   aggregateSum: number | null
   inputCount: number | null
   estimatedRespondents: number | null
   meanAnswer: number | null
 }
 
-/**
- * Decode committee plaintext into per-question sums (CRISP decodeTally layout).
- * Falls back to null tallies if bytes are too short / wrong shape.
- */
 export function decodePerQuestion(
   plaintextOutput: string | null | undefined,
+  visibleCount: number = PACKING_SLOTS,
 ): bigint[] | null {
   if (!plaintextOutput || plaintextOutput === '0x' || plaintextOutput === '0x0') return null
   try {
-    return decodeSurveyTally(plaintextOutput, QUESTIONS_PER_RESPONSE)
+    return decodeSurveyTally(plaintextOutput, visibleCount)
   } catch {
     return null
   }
 }
 
 /**
- * InterFold BFV compute still sum-alls ciphertexts. With CRISP packing, each CT carries
- * the answer in one question segment, so the decrypted poly yields one total per question.
+ * InterFold BFV compute sum-alls ciphertexts. With CRISP packing, each CT carries
+ * the answer in one packing slot, so decrypt yields one total per slot.
  */
 export function buildAggregates(opts: {
   plaintextOutput?: string | null
   inputCount?: number | null
+  questions: SurveyQuestion[]
 }): SurveyAggregates {
+  const questions = opts.questions
+  const perResponse = questions.length
   const inputCount = opts.inputCount ?? null
   const estimatedRespondents =
-    inputCount != null && inputCount > 0 ? Math.floor(inputCount / QUESTIONS_PER_RESPONSE) : null
+    inputCount != null && inputCount > 0 && perResponse > 0
+      ? Math.floor(inputCount / perResponse)
+      : null
 
-  const tallies = decodePerQuestion(opts.plaintextOutput ?? null)
-  const questionTallies: QuestionTally[] = SURVEY_QUESTIONS.map((q, index) => {
+  const tallies = decodePerQuestion(opts.plaintextOutput ?? null, Math.max(perResponse, 2))
+  const questionTallies: QuestionTally[] = questions.map((q, index) => {
     const sumBi = tallies?.[index] ?? null
     const sum = sumBi != null ? Number(sumBi) : null
     const mean =
@@ -84,5 +82,3 @@ export function buildAggregates(opts: {
     meanAnswer,
   }
 }
-
-export { QUESTIONS_PER_RESPONSE }

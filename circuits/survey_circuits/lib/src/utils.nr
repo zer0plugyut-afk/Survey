@@ -228,31 +228,31 @@ fn encode_ballot<let D: u32>(
 
 #[test]
 fn test_2_options_vote_first() {
-    let pol = encode_ballot::<TEST_DEGREE>([5, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 2));
 }
 
 #[test]
 fn test_2_options_vote_second() {
-    let pol = encode_ballot::<TEST_DEGREE>([0, 3, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 2));
 }
 
 #[test]
 fn test_2_options_both_voted_fails() {
-    let pol = encode_ballot::<TEST_DEGREE>([1, 1, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(!check_coefficient_values_with_balance(pol, 1, 100, 2));
 }
 
 #[test]
 fn test_2_options_exceeds_balance_fails() {
-    let pol = encode_ballot::<TEST_DEGREE>([10, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(!check_coefficient_values_with_balance(pol, 1, 5, 2));
 }
 
 #[test]
 fn test_2_options_at_balance_passes() {
-    let pol = encode_ballot::<TEST_DEGREE>([5, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 5, 2));
 }
 
@@ -260,7 +260,7 @@ fn test_2_options_at_balance_passes() {
 /// ballot worth `2**49` passed against any balance.
 #[test]
 fn test_2_options_top_bit_is_bounded() {
-    let pol = encode_ballot::<TEST_DEGREE>([562949953421312, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([562949953421312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     assert(!check_coefficient_values_with_balance(pol, 1, 1, 2));
     assert(check_coefficient_values_with_balance(pol, 1, 562949953421312, 2));
 }
@@ -269,37 +269,37 @@ fn test_2_options_top_bit_is_bounded() {
 
 #[test]
 fn test_3_options_split_vote() {
-    let pol = encode_ballot::<TEST_DEGREE>([40, 0, 60, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([40, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 3));
 }
 
 #[test]
 fn test_3_options_vote_all_three() {
-    let pol = encode_ballot::<TEST_DEGREE>([30, 30, 30, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([30, 30, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 3));
 }
 
 #[test]
 fn test_3_options_total_exceeds_balance_fails() {
-    let pol = encode_ballot::<TEST_DEGREE>([60, 60, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([60, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     assert(!check_coefficient_values_with_balance(pol, 1, 100, 3));
 }
 
 #[test]
 fn test_5_options_single_vote() {
-    let pol = encode_ballot::<TEST_DEGREE>([0, 0, 50, 0, 0, 0, 0, 0, 0, 0], 5, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([0, 0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 5, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 5));
 }
 
 #[test]
 fn test_zero_vote_passes() {
-    let pol = encode_ballot::<TEST_DEGREE>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     assert(check_coefficient_values_with_balance(pol, 1, 100, 3));
 }
 
 #[test]
 fn test_invalid_coefficient_fails() {
-    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     // Option 0 occupies the top segment, so its least significant coefficient is the last one.
     pol.coefficients[TEST_DEGREE - 1] = 2;
 
@@ -310,7 +310,7 @@ fn test_invalid_coefficient_fails() {
 /// were never read, which let any submitter attach a payload to a slot.
 #[test]
 fn test_payload_outside_ballot_region_fails() {
-    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
+    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2, 1);
     pol.coefficients[0] = 1;
 
     assert(!check_coefficient_values_with_balance(pol, 1, 100, 2));
@@ -320,7 +320,7 @@ fn test_payload_outside_ballot_region_fails() {
 /// bottom of the ballot region. It belongs to no option, so it must be zero.
 #[test]
 fn test_unused_message_coefficient_fails() {
-    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let mut pol: Polynomial<TEST_DEGREE> = encode_ballot([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     // MAX_MSG_NON_ZERO_COEFFS is 100 and three segments of 33 leave one coefficient over.
     pol.coefficients[TEST_DEGREE - MAX_MSG_NON_ZERO_COEFFS] = 1;
 
@@ -335,7 +335,7 @@ fn test_check_coefficient_zero_passes() {
 
 #[test]
 fn test_check_coefficient_zero_fails() {
-    let pol = encode_ballot::<TEST_DEGREE>([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
+    let pol = encode_ballot::<TEST_DEGREE>([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1);
     assert(!check_coefficient_zero(pol, 3));
 }
 

@@ -1,11 +1,11 @@
-import { SURVEY_QUESTIONS, SurveyQuestion } from '../data/questions'
+import type { SurveyQuestion } from '../data/questions'
 
 type Answers = Record<string, number | null>
 
 type Props = {
   answers: Answers
   onChange: (id: string, value: number) => void
-  questions?: SurveyQuestion[]
+  questions: SurveyQuestion[]
 }
 
 function QuestionBlock({
@@ -60,11 +60,7 @@ function QuestionBlock({
   )
 }
 
-export function QuestionForm({
-  answers,
-  onChange,
-  questions = SURVEY_QUESTIONS,
-}: Props) {
+export function QuestionForm({ answers, onChange, questions }: Props) {
   return (
     <div>
       {questions.map((q) => (

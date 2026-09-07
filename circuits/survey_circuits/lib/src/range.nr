@@ -11,8 +11,8 @@ use interfold_lib::math::polynomial::Polynomial;
 
 use crate::constants::{MAX_OPTIONS, MAX_VOTE_BITS};
 
-/// Education survey question count (must match SurveyProgram.QUESTION_COUNT).
-global QUESTION_COUNT: u32 = 5;
+/// Fixed packing width (must match SurveyProgram.QUESTION_COUNT). Surveys may use fewer slots.
+global QUESTION_COUNT: u32 = 20;
 
 /// CRISP ballot layout inside reversed `k1` (see crisp-sdk encoding + crisp_lib utils).
 fn ballot_layout<let D: u32>(num_options: u32) -> (u32, u32) {

@@ -7,6 +7,17 @@ function toHttpRpcUrl(url: string): string {
 }
 
 const e3FromEnv = import.meta.env.VITE_E3_PROGRAM_ADDRESS as `0x${string}` | undefined
+const adminFromEnv = import.meta.env.VITE_SURVEY_ADMIN_ADDRESS as `0x${string}` | undefined
+
+/** Only this wallet may open Create survey (demo / v1). Override with VITE_SURVEY_ADMIN_ADDRESS. */
+export const SURVEY_ADMIN_ADDRESS = (
+  adminFromEnv || '0xf2fa17aaba2a45dc1184bf212c7aa3b923f36bc9'
+).toLowerCase() as `0x${string}`
+
+export function isSurveyAdmin(address?: string | null): boolean {
+  if (!address) return false
+  return address.toLowerCase() === SURVEY_ADMIN_ADDRESS
+}
 
 export const SEPOLIA = {
   chainId: 11155111,
@@ -34,9 +45,9 @@ export const SEPOLIA = {
     interfold: '0x3E856E24c7a95d0e04d387f847DA6FA9f6F6c20C' as const,
     ciphernodeRegistry: '0x374F4542eC634d5437Dd65020781A9D9Df9c2AB8' as const,
     feeToken: '0xC35B783cA97710be47Fc81D10dADc895EfcD865c' as const,
-    /** Live SurveyProgram (insecure-512 fold) — override with VITE_E3_PROGRAM_ADDRESS */
+    /** Live SurveyProgram (insecure-512, up to 20 questions) — override with VITE_E3_PROGRAM_ADDRESS */
     e3Program: (e3FromEnv ||
-      '0x7e7Fe6c3216897A619D2e7aD0D3136B0f4d11833') as `0x${string}`,
+      '0x15d0cdD27A1D7cf5488CC74470bEe26Cc6c6955a') as `0x${string}`,
   },
 }
 

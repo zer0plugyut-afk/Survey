@@ -13,6 +13,7 @@
     "@interfold/react": "^0.11.1",
     "@interfold/sdk": "^0.11.1",
     "@noir-lang/noir_js": "^1.0.0-beta.26",
+    "@supabase/supabase-js": "^2.49.8",
     "@tanstack/react-query": "^5.74.3",
     "connectkit": "^1.9.0",
     "lucide-react": "^1.33.0",
