@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
-import { ConnectKitButton } from 'connectkit'
 import {
   DEFAULT_COMPUTE_PROVIDER_PARAMS,
   DEFAULT_E3_CONFIG,
@@ -53,10 +52,13 @@ function emptyAggregates(): SurveyAggregates {
 }
 
 export function CreateSurveyFlow() {
-  const { isConnected, chainId } = useAccount()
+  const { address, chainId } = useAccount()
   const sdk = useSurveySdk()
-  const [step, setStep] = useState(0)
-  const [maxReachable, setMaxReachable] = useState(0)
+  const walletReady = Boolean(address)
+  const onSepolia = chainId === SEPOLIA.chainId
+  // CreatePage already requires the admin wallet — don't re-block on wagmi isConnected.
+  const [step, setStep] = useState(() => (walletReady ? 1 : 0))
+  const [maxReachable, setMaxReachable] = useState(() => (walletReady ? 1 : 0))
   const [title, setTitle] = useState('Spring 2026 course feedback')
   const [windowValue, setWindowValue] = useState(48)
   const [windowUnit, setWindowUnit] = useState<'minutes' | 'hours'>('hours')
@@ -179,8 +181,8 @@ export function CreateSurveyFlow() {
   }, [])
 
   useEffect(() => {
-    if (isConnected && sdk.isInitialized && step === 0) go(1)
-  }, [isConnected, sdk.isInitialized, step])
+    if (walletReady && step === 0) go(1)
+  }, [walletReady, step])
 
   const refreshOnChainResults = useCallback(async () => {
     if (!sdk.sdk || !e3Id) return
@@ -433,17 +435,23 @@ export function CreateSurveyFlow() {
       {step === 0 && (
         <StepPanel
           kicker="Step 1 · Wallet"
-          title={isConnected ? 'Wallet ready' : 'Connect on Sepolia'}
+          title={walletReady ? 'Wallet ready' : 'Connect on Sepolia'}
           lede={
-            isConnected
+            walletReady
               ? 'You’re connected in the header. Continue to configure the survey round.'
-              : 'Researcher wallet pays the E3 fee and requests a computation round. Individual answers stay encrypted.'
+              : 'Use the Connect button in the header (top right). Researcher wallet pays the E3 fee; answers stay encrypted.'
           }
         >
           <div className="status-box">
             <strong>Network</strong>
             Sepolia · SurveyProgram <span className="mono">{shortAddr(SEPOLIA.contracts.e3Program)}</span>
-            {isConnected && chainId !== SEPOLIA.chainId ? (
+            {walletReady ? (
+              <>
+                <br />
+                Connected <span className="mono">{shortAddr(address)}</span>
+              </>
+            ) : null}
+            {walletReady && !onSepolia ? (
               <>
                 <br />
                 Switch to Sepolia in the header wallet control to continue.
@@ -451,13 +459,18 @@ export function CreateSurveyFlow() {
             ) : null}
           </div>
           {sdk.error ? <p className="note note--error">{sdk.error}</p> : null}
+          {!sdk.isInitialized && !sdk.error ? (
+            <p className="note">Preparing InterFold SDK…</p>
+          ) : null}
           <div className="actions">
-            {!isConnected ? <ConnectKitButton /> : null}
-            {isConnected && sdk.isInitialized ? (
-              <button type="button" className="btn btn--primary" onClick={() => go(1)}>
-                Continue
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={!walletReady || !onSepolia}
+              onClick={() => go(1)}
+            >
+              {!walletReady ? 'Connect in the header first' : !onSepolia ? 'Switch to Sepolia' : 'Continue'}
+            </button>
           </div>
         </StepPanel>
       )}

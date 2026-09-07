@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAccount, useWalletClient } from 'wagmi'
-import { ConnectKitButton } from 'connectkit'
 import { Timeline, TimelineStep } from '../components/Timeline'
 import { StepPanel } from '../components/StepPanel'
 import { QuestionForm } from '../components/QuestionForm'
@@ -27,12 +26,14 @@ function emptyAnswers(questions: SurveyQuestion[]) {
 export function RespondFlow() {
   const [params] = useSearchParams()
   const e3FromUrl = params.get('e3')
-  const { isConnected, address, chainId } = useAccount()
+  const { address, chainId } = useAccount()
   const { data: walletClient } = useWalletClient()
   const sdk = useSurveySdk()
+  const walletReady = Boolean(address)
+  const onSepolia = chainId === SEPOLIA.chainId
 
-  const [step, setStep] = useState(0)
-  const [maxReachable, setMaxReachable] = useState(0)
+  const [step, setStep] = useState(() => (walletReady ? 1 : 0))
+  const [maxReachable, setMaxReachable] = useState(() => (walletReady ? 1 : 0))
   const [questions, setQuestions] = useState<SurveyQuestion[]>([])
   const [surveyTitle, setSurveyTitle] = useState('Course feedback')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -74,6 +75,10 @@ export function RespondFlow() {
     setStep(next)
     setMaxReachable((m) => Math.max(m, next))
   }
+
+  useEffect(() => {
+    if (walletReady && step === 0 && !loadError && questions.length > 0) go(1)
+  }, [walletReady, step, loadError, questions.length])
 
   const submit = async () => {
     setBusy(true)
@@ -144,17 +149,23 @@ export function RespondFlow() {
       {step === 0 && (
         <StepPanel
           kicker="Step 1 · Wallet"
-          title={isConnected ? 'Wallet ready' : 'Join this survey round'}
+          title={walletReady ? 'Wallet ready' : 'Join this survey round'}
           lede={
-            isConnected
+            walletReady
               ? 'You’re connected in the header. Continue to answer the questions.'
-              : 'Answers encrypt under the ciphernode committee key before leaving the browser.'
+              : 'Use Connect in the header (top right). Answers encrypt under the committee key before leaving the browser.'
           }
         >
           <div className="status-box">
             <strong>Round</strong>
             <span className="mono">{e3FromUrl ?? 'Open respond link from the researcher (includes e3 id)'}</span>
-            {isConnected && chainId !== SEPOLIA.chainId ? (
+            {walletReady ? (
+              <>
+                <br />
+                Connected <span className="mono">{shortAddr(address)}</span>
+              </>
+            ) : null}
+            {walletReady && !onSepolia ? (
               <>
                 <br />
                 Switch to Sepolia in the header wallet control to continue.
@@ -163,17 +174,18 @@ export function RespondFlow() {
           </div>
           {loadError ? <p className="note note--error">{loadError}</p> : null}
           <div className="actions">
-            {!isConnected ? <ConnectKitButton /> : null}
-            {isConnected && sdk.isInitialized ? (
-              <button
-                type="button"
-                className="btn btn--primary"
-                disabled={Boolean(loadError) || questions.length === 0}
-                onClick={() => go(1)}
-              >
-                Continue
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={!walletReady || !onSepolia || Boolean(loadError) || questions.length === 0}
+              onClick={() => go(1)}
+            >
+              {!walletReady
+                ? 'Connect in the header first'
+                : !onSepolia
+                  ? 'Switch to Sepolia'
+                  : 'Continue'}
+            </button>
           </div>
         </StepPanel>
       )}

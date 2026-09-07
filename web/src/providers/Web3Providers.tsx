@@ -10,7 +10,8 @@ const wagmiConfig = createConfig(
   getDefaultConfig({
     appName: 'InterFold Education Survey',
     enableFamily: false,
-    chains: [sepolia],
+    // Keep mainnet for ConnectKit ENS lookups; app txs stay on Sepolia.
+    chains: [sepolia, mainnet],
     transports: {
       [sepolia.id]: http(SEPOLIA.rpcUrl),
       [mainnet.id]: http(SEPOLIA.mainnetRpcUrl),
