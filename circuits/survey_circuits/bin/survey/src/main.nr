@@ -13,7 +13,7 @@ use interfold_lib::math::{
     },
     polynomial::Polynomial,
 };
-use survey_lib::range::assert_number_in_range;
+use survey_lib::range::assert_packed_answer_in_range;
 
 fn main(
     // Ciphertext + plaintext (same witness family as Greco / user_data_encryption).
@@ -38,7 +38,13 @@ fn main(
     assert(respondent != 0);
     assert((question_index as u64) < 5);
 
-    assert_number_in_range(k1, min_value as u64, max_value as u64);
+    // CRISP-style packing: answer lives in the question_index binary segment.
+    assert_packed_answer_in_range(
+        k1,
+        question_index as u64,
+        min_value as u64,
+        max_value as u64,
+    );
 
     (ct_commitment, k1_commitment)
 }

@@ -1,20 +1,25 @@
 /**
  * Client survey_fold proving — InterFold docs path:
  *
- *   encryptNumberAndGenInputs (SDK WASM, preset from SEPOLIA config)
+ *   encodeSurveyAnswer (CRISP-style slot packing)
+ *     → encryptVectorAndGenInputs (SDK WASM, preset from SEPOLIA config)
  *     → user_data_encryption_ct0 / ct1 / wrapper  (app-owned compiled circuits)
- *     → survey
+ *     → survey (packed range check)
  *     → survey_fold (keccak / EVM Honk for SurveyFoldVerifier)
  *
  * Do NOT use SDK `generateProof` — npm embeds N=512 UDE only. Use compiled JSON from
  * `CIRCUIT_PRESET=secure-8192` or `insecure-512` per docs / deployment (see PRESET.txt).
+ *
+ * Packing mirrors CRISP encodeVote / decodeTally (docs.theinterfold.com/CRISP + crisp-sdk).
  */
 import { Barretenberg, UltraHonkBackend, type ProofData } from '@aztec/bb.js'
 import { Noir, type CompiledCircuit, type InputMap } from '@noir-lang/noir_js'
 import {
-  encryptNumberAndGenInputs,
+  encryptVectorAndGenInputs,
+  getThresholdBfvParamsSet,
   type EncryptedValueAndPublicInputs,
 } from '@interfold/sdk/crypto'
+import { encodeSurveyAnswer } from './surveyEncoding'
 
 type CircuitInputs = EncryptedValueAndPublicInputs['circuitInputs']
 
@@ -171,9 +176,17 @@ export async function generateSurveyFoldProof(args: {
   }
   const status = onStatus ?? (() => {})
 
-  status('Encrypting answer + GRECO circuit inputs (secure-8192)…')
-  const { encryptedData, circuitInputs } = await encryptNumberAndGenInputs(
-    value,
+  status('Packing answer into question slot (CRISP layout)…')
+  const bfv = await getThresholdBfvParamsSet(preset)
+  const packed = encodeSurveyAnswer({
+    questionIndex,
+    answer: value,
+    degree: bfv.degree,
+  })
+
+  status('Encrypting packed vector + GRECO circuit inputs…')
+  const { encryptedData, circuitInputs } = await encryptVectorAndGenInputs(
+    packed,
     publicKey,
     preset,
   )

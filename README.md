@@ -31,10 +31,10 @@ deployments/               address env (no private keys)
 ## Circuits (CRISP-style)
 
 1. InterFold `user_data_encryption_*` (Greco)
-2. App `survey` circuit
+2. App `survey` circuit (CRISP-packed answer in question slot)
 3. `survey_fold` (verifies UDE + survey) → keccak Honk
 
-Frontend prove path: `web/src/utils/surveyFoldProof.ts` imports `web/src/circuits/*.json`.
+Frontend: `encodeSurveyAnswer` → `encryptVectorAndGenInputs` → prove; results via `decodeSurveyTally` (not SDK `decodePlaintextOutput`).
 
 Details: `circuits/README.md`.
 

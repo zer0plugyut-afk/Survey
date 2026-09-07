@@ -20,10 +20,12 @@ circuits/survey_circuits/
 
 InterFold **UDE** (`user_data_encryption_ct0` / `ct1` / wrapper) lives in the InterFold repo `circuits/bin/threshold/` and is compiled first; JSON copies land in `web/src/circuits/`.
 
+**Packing (CRISP-aligned):** each answer is encoded into the `questionIndex` binary segment of the first `MAX_MSG_NON_ZERO_COEFFS` plaintext coeffs (`web/src/utils/surveyEncoding.ts`), encrypted with `encryptVectorAndGenInputs`, and range-checked in `survey_circuits/lib/src/range.nr`. The FHE guest can stay sum-all; decrypt + `decodeSurveyTally` yields per-question totals. See [CRISP introduction](https://docs.theinterfold.com/CRISP/introduction) and `examples/CRISP/packages/crisp-sdk/src/encoding.ts`.
+
 Compile (WSL):
 
 ```bash
 CIRCUIT_PRESET=insecure-512 ./scripts/compile-circuits.sh
 ```
 
-That script currently points at an InterFold checkout via `INTERFOLD_REPO` and copies JSON → `web/src/circuits/` plus the Solidity verifier → `generated/verifiers/`.
+After changing survey Noir sources you must recompile (survey + survey_fold), copy JSON → `web/src/circuits/`, and redeploy the Honk verifier — the fold embeds the survey VK.

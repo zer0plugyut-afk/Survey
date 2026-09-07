@@ -41,12 +41,13 @@ const STEPS: TimelineStep[] = [
   { id: 'configure', title: 'Configure', subtitle: 'Title & questions' },
   { id: 'request', title: 'Request E3', subtitle: 'Committee + keys' },
   { id: 'live', title: 'Collect', subtitle: 'Share respond link' },
-  { id: 'results', title: 'Results', subtitle: 'Aggregates only' },
+  { id: 'results', title: 'Results', subtitle: 'Per-question tallies' },
 ]
 
 function emptyAggregates(): SurveyAggregates {
   return {
     plaintextHex: null,
+    questionTallies: [],
     aggregateSum: null,
     inputCount: null,
     estimatedRespondents: null,
@@ -228,7 +229,7 @@ export function CreateSurveyFlow() {
         setPublicKey(e3.committeePublicKey as `0x${string}`)
       }
 
-      if (next.aggregateSum != null) {
+      if (next.questionTallies.some((t) => t.sum != null) || next.aggregateSum != null) {
         setResultsStatus('Committee published plaintext output')
         await persist({
           id: `e3-${e3Id}`,
@@ -727,8 +728,8 @@ export function CreateSurveyFlow() {
       {step === 4 && (
         <StepPanel
           kicker="Step 5 · Results"
-          title="Aggregate plaintext"
-          lede="Listens for PlaintextOutputPublished and also reads getE3 / SurveyProgram.rounds. InterFold decrypts the sum of all published encrypted integers (not per-student rows)."
+          title="Per-question tallies"
+          lede="Listens for PlaintextOutputPublished. Answers are CRISP-packed by question slot; FHE sum-all decrypts to one total per question (not per-student rows)."
         >
           <p className="note" style={{ marginTop: 0 }}>
             {resultsStatus}
@@ -742,19 +743,34 @@ export function CreateSurveyFlow() {
               <p className="gauge__label">Est. respondents</p>
               <p className="gauge__value">{fmt(aggregates.estimatedRespondents, 0)}</p>
             </div>
-            <div className="gauge">
-              <p className="gauge__label">Aggregate sum</p>
-              <p className="gauge__value">{fmt(aggregates.aggregateSum, 0)}</p>
-            </div>
-            <div className="gauge">
-              <p className="gauge__label">Mean answer</p>
-              <p className="gauge__value">{fmt(aggregates.meanAnswer)}</p>
-            </div>
           </div>
+          {aggregates.questionTallies.length > 0 ? (
+            <div className="status-box" style={{ display: 'grid', gap: '0.75rem' }}>
+              <strong>Per-question results</strong>
+              {aggregates.questionTallies.map((t) => (
+                <div key={t.id} style={{ display: 'grid', gap: '0.15rem' }}>
+                  <span>
+                    Q{t.index}: {t.prompt}
+                  </span>
+                  <span className="mono">
+                    sum={fmt(t.sum, 0)}
+                    {t.kind === 'likert' ? ` · mean=${fmt(t.mean)}` : ''}
+                    {t.kind === 'yesno' ? ` · yes≈${fmt(t.sum, 0)}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="status-box">
+              <strong>Waiting for plaintext</strong>
+              Once the committee decrypts, tallies appear here (CRISP decodeTally layout).
+            </div>
+          )}
           <div className="status-box">
             <strong>How to read this</strong>
-            Each respondent publishes {QUESTIONS_PER_RESPONSE} encrypted integers. The committee decrypts one
-            aggregate sum. Mean answer = sum ÷ input count. Per-question breakouts need a richer compute program later.
+            Each respondent publishes {QUESTIONS_PER_RESPONSE} ciphertexts (one per question), each packed
+            into that question&apos;s binary segment. Homomorphic sum keeps slots separate — decrypt yields
+            [Q0, Q1, Q2, Q3, Q4].
           </div>
           {aggregates.plaintextHex ? (
             <div className="status-box">
