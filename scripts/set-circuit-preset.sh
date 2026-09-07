@@ -53,8 +53,8 @@ esac
 echo "Wrote $MOD"
 grep -E 'preset:|pub use super::(secure|insecure)::threshold' "$MOD"
 echo "N/L from active threshold:"
-# Resolve via nargo would be ideal; print secure constants when secure selected
-if grep -q 'secure::threshold' "$MOD"; then
+# Match `::secure::` only — `insecure::threshold` also contains the substring `secure::threshold`.
+if grep -q 'super::secure::threshold' "$MOD"; then
   grep -E 'pub global (N|L):' "$REPO/circuits/lib/src/configs/secure/threshold.nr" | head -2
 else
   grep -E 'pub global (N|L):' "$REPO/circuits/lib/src/configs/insecure/threshold.nr" | head -2
