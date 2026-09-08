@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ConnectKitButton } from 'connectkit'
 import { useAccount } from 'wagmi'
 import { ClipboardPlus, EyeOff, Lock, MessagesSquare, Shield, Sparkles, Users } from 'lucide-react'
 import { isSurveyAdmin, SEPOLIA, shortAddr } from '../config/sepolia'
+import { WalletControl } from '../components/WalletControl'
 
 function useSoftTheme() {
   useEffect(() => {
@@ -33,7 +33,7 @@ export function HomePage() {
           </nav>
           <div className="landing-nav__actions">
             <span className="network-pill">{SEPOLIA.name}</span>
-            <ConnectKitButton />
+            <WalletControl />
           </div>
         </header>
 

@@ -1,9 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
 import { ReactNode, useEffect, useId } from 'react'
-import { ConnectKitButton } from 'connectkit'
 import { useAccount } from 'wagmi'
 import { isSurveyAdmin, SEPOLIA } from '../config/sepolia'
 import { GlassIcon, NavIcons, glassAccentStyle } from './GlassIcon'
+import { WalletControl } from './WalletControl'
 
 type Props = {
   children: ReactNode
@@ -68,7 +68,7 @@ export function Shell({ children, title, badge = 'Privacy-preserving · E3', led
               <div className="network-pill">
                 {SEPOLIA.name} · {SEPOLIA.chainId}
               </div>
-              <ConnectKitButton />
+              <WalletControl />
             </div>
           </header>
           <main className="workspace">

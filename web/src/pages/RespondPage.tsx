@@ -258,9 +258,6 @@ export function RespondPage() {
           navigate(`/respond?e3=${encodeURIComponent(e3Id)}`)
         }}
       />
-      <p className="note" style={{ marginTop: 16 }}>
-        Direct links still work: <span className="mono">/respond?e3=&lt;id&gt;</span>
-      </p>
     </Shell>
   )
 }

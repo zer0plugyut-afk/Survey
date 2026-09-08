@@ -21,6 +21,7 @@ import {
 import { useSurveySdk } from '../providers/InterfoldSdkProvider'
 import { buildAggregates, type SurveyAggregates } from '../utils/surveyResults'
 import { readSurveyInputCount } from '../utils/surveyProgram'
+import { CreateProgressCard, SurveyCreatedModal } from '../components/CreateOverlays'
 import {
   getSurvey,
   getSurveyByE3Id,
@@ -70,6 +71,12 @@ export function CreateSurveyFlow() {
   const [txHash, setTxHash] = useState<string | null>(null)
   const [publicKey, setPublicKey] = useState<`0x${string}` | null>(null)
   const [busy, setBusy] = useState(false)
+  const [createProgress, setCreateProgress] = useState<{ title: string; detail: string; percent: number } | null>(
+    null,
+  )
+  const [showCreatedModal, setShowCreatedModal] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [awaitingCreatedModal, setAwaitingCreatedModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [whitelistNote, setWhitelistNote] = useState(false)
   const [saved, setSaved] = useState<StoredSurvey[]>([])
@@ -183,6 +190,14 @@ export function CreateSurveyFlow() {
   useEffect(() => {
     if (walletReady && step === 0) go(1)
   }, [walletReady, step])
+
+  useEffect(() => {
+    if (awaitingCreatedModal && e3Id) {
+      setShowCreatedModal(true)
+      setAwaitingCreatedModal(false)
+      setCreateProgress(null)
+    }
+  }, [awaitingCreatedModal, e3Id])
 
   const refreshOnChainResults = useCallback(async () => {
     if (!sdk.sdk || !e3Id) return
@@ -353,11 +368,14 @@ export function CreateSurveyFlow() {
     setBusy(true)
     setError(null)
     setWhitelistNote(false)
+    setLinkCopied(false)
+    setShowCreatedModal(false)
     try {
       if (!sdk.sdk) throw new Error('SDK not initialized — connect wallet on Sepolia')
       if (chainId !== SEPOLIA.chainId) throw new Error('Switch MetaMask to Sepolia')
       if (!questionsReady(questions)) throw new Error('Add at least two questions with prompts')
 
+      setCreateProgress({ title: title || 'New survey', detail: 'Saving questions to Supabase…', percent: 12 })
       await persist({
         id: surveyId,
         e3Id: null,
@@ -372,10 +390,10 @@ export function CreateSurveyFlow() {
 
       const publicClient = sdk.sdk.getPublicClient()
       const duration = Math.max(60, windowSeconds)
-      // Approve can take >15s; InterFold rejects windows whose start is already past.
       const startBuffer = 180n
       const computeProviderParams = encodeComputeProviderParams(DEFAULT_COMPUTE_PROVIDER_PARAMS)
 
+      setCreateProgress({ title: title || 'New survey', detail: 'Fetching E3 fee quote…', percent: 28 })
       const quoteWindow = await calculateInputWindow(publicClient, duration, startBuffer)
       const quoteParams = {
         committeeSize: DEFAULT_E3_CONFIG.committeeSize,
@@ -386,10 +404,12 @@ export function CreateSurveyFlow() {
       }
 
       const fee = await sdk.sdk.getE3Quote(quoteParams)
+      setCreateProgress({ title: title || 'New survey', detail: 'Approving fee token…', percent: 48 })
       const approveTx = await sdk.sdk.approveFeeToken(fee)
+      setCreateProgress({ title: title || 'New survey', detail: 'Waiting for approve confirmation…', percent: 62 })
       await publicClient.waitForTransactionReceipt({ hash: approveTx })
 
-      // Fresh window after approve so start is still in the future at request time.
+      setCreateProgress({ title: title || 'New survey', detail: 'Requesting encrypted execution…', percent: 78 })
       const inputWindow = await calculateInputWindow(publicClient, duration, startBuffer)
       const hash = await sdk.requestE3({
         ...quoteParams,
@@ -397,6 +417,7 @@ export function CreateSurveyFlow() {
         maxFee: fee,
       })
       setTxHash(hash)
+      setCreateProgress({ title: title || 'New survey', detail: 'Waiting for e3 id…', percent: 90 })
       await persist({
         id: surveyId,
         status: 'requested',
@@ -407,10 +428,13 @@ export function CreateSurveyFlow() {
         windowSeconds,
         windowLabel,
       })
+      setAwaitingCreatedModal(true)
       go(3)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)
+      setCreateProgress(null)
+      setAwaitingCreatedModal(false)
       if (
         /not allowed|whitelist|unauthorized|register|forbidden|E3ProgramNotEnabled|program not/i.test(msg) &&
         !/InvalidInputDeadlineStart/i.test(msg)
@@ -424,12 +448,42 @@ export function CreateSurveyFlow() {
   }
 
   const respondPath = useMemo(() => respondPathFor(e3Id), [e3Id])
+  const respondUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}${respondPath}` : respondPath
+
+  const copyRespondLink = async () => {
+    try {
+      await navigator.clipboard?.writeText(respondUrl)
+      setLinkCopied(true)
+    } catch {
+      setLinkCopied(false)
+    }
+  }
 
   const fmt = (n: number | null, digits = 2) =>
     n == null || Number.isNaN(n) ? '—' : Number.isInteger(n) ? String(n) : n.toFixed(digits)
 
   return (
     <div className="flow">
+      {createProgress ? (
+        <div className="create-progress-overlay">
+          <CreateProgressCard
+            title={createProgress.title}
+            detail={createProgress.detail}
+            percent={createProgress.percent}
+          />
+        </div>
+      ) : null}
+      {showCreatedModal && e3Id ? (
+        <SurveyCreatedModal
+          title={title}
+          respondUrl={respondUrl}
+          e3Id={e3Id}
+          copied={linkCopied}
+          onCopy={() => void copyRespondLink()}
+          onClose={() => setShowCreatedModal(false)}
+        />
+      ) : null}
       <Timeline steps={STEPS} activeIndex={step} maxReachable={maxReachable} onSelect={setStep} />
 
       {step === 0 && (

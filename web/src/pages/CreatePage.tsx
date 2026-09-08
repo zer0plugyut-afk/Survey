@@ -1,14 +1,12 @@
-import { ConnectKitButton } from 'connectkit'
 import { Link } from 'react-router-dom'
 import { useAccount } from 'wagmi'
 import { Shell } from '../components/Shell'
 import { CreateSurveyFlow } from '../flows/CreateSurveyFlow'
+import { WalletControl } from '../components/WalletControl'
 import { isSurveyAdmin, shortAddr, SURVEY_ADMIN_ADDRESS } from '../config/sepolia'
 
 export function CreatePage() {
   const { address, isConnecting, isReconnecting } = useAccount()
-  // Prefer `address` over `isConnected` — ConnectKit can show a connected pill while
-  // wagmi's isConnected flickers false during reconnect.
   const connected = Boolean(address)
   const allowed = isSurveyAdmin(address)
   const pending = isConnecting || isReconnecting
@@ -30,7 +28,7 @@ export function CreatePage() {
             Creating surveys is limited to the admin wallet for this Sepolia version. Respondents can
             still use <Link to="/respond">Respond</Link> with any wallet.
           </p>
-          <ConnectKitButton />
+          <WalletControl />
         </div>
       ) : !allowed ? (
         <div className="status-box">
