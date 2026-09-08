@@ -4,6 +4,7 @@ import {
   type SurveyQuestion,
 } from '../data/questions'
 import { SoftSelect } from './SoftSelect'
+import { GlassIcon, SurveyIcons } from './GlassIcon'
 
 type Props = {
   questions: SurveyQuestion[]
@@ -57,7 +58,13 @@ export function QuestionEditor({ questions, onChange }: Props) {
       {questions.map((q, index) => (
         <div className="q-editor__card" key={q.id}>
           <div className="q-editor__head">
-            <span>Question {index + 1}</span>
+            <span className="q-editor__label">
+              <GlassIcon
+                icon={q.kind === 'yesno' ? SurveyIcons.yesno : SurveyIcons.likert}
+                size={16}
+              />
+              Question {index + 1}
+            </span>
             <div className="q-editor__head-actions">
               <SoftSelect
                 aria-label={`Type for question ${index + 1}`}
@@ -80,7 +87,9 @@ export function QuestionEditor({ questions, onChange }: Props) {
             </div>
           </div>
           <div className="field">
-            <label htmlFor={`q-prompt-${q.id}`}>Prompt</label>
+            <label htmlFor={`q-prompt-${q.id}`}>
+              <GlassIcon icon={SurveyIcons.question} size={14} /> Prompt
+            </label>
             <input
               id={`q-prompt-${q.id}`}
               value={q.prompt}
@@ -106,7 +115,10 @@ export function QuestionEditor({ questions, onChange }: Props) {
           disabled={questions.length >= MAX_SURVEY_QUESTIONS}
           onClick={addQuestion}
         >
-          Add question ({questions.length}/{MAX_SURVEY_QUESTIONS})
+          <GlassIcon icon={SurveyIcons.pen} size={16} />
+          <span style={{ marginLeft: 8 }}>
+            Add question ({questions.length}/{MAX_SURVEY_QUESTIONS})
+          </span>
         </button>
       </div>
     </div>

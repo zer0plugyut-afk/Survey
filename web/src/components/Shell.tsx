@@ -1,9 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, useId } from 'react'
 import { ConnectKitButton } from 'connectkit'
 import { useAccount } from 'wagmi'
-import { ClipboardPlus, Home, MessagesSquare } from 'lucide-react'
 import { isSurveyAdmin, SEPOLIA } from '../config/sepolia'
+import { GlassIcon, NavIcons, glassAccentStyle } from './GlassIcon'
 
 type Props = {
   children: ReactNode
@@ -12,16 +12,21 @@ type Props = {
   lede?: string
 }
 
+function DockIcon({ icon: Icon }: { icon: (typeof NavIcons)[keyof typeof NavIcons] }) {
+  const uid = useId().replace(/:/g, '')
+  return <Icon size={22} uniqueId={uid} style={glassAccentStyle} />
+}
+
 export function Shell({ children, title, badge = 'Privacy-preserving · E3', lede }: Props) {
   const { address } = useAccount()
   const showCreate = isSurveyAdmin(address)
 
   const nav = [
-    { to: '/', end: true, label: 'Home', Icon: Home },
+    { to: '/', end: true, label: 'Home', Icon: NavIcons.home },
     ...(showCreate
-      ? [{ to: '/create', end: false, label: 'Create survey', Icon: ClipboardPlus } as const]
+      ? [{ to: '/create', end: false, label: 'Create survey', Icon: NavIcons.create } as const]
       : []),
-    { to: '/respond', end: false, label: 'Respond', Icon: MessagesSquare },
+    { to: '/respond', end: false, label: 'Respond', Icon: NavIcons.respond },
   ] as const
 
   useEffect(() => {
@@ -44,7 +49,7 @@ export function Shell({ children, title, badge = 'Privacy-preserving · E3', led
               title={label}
             >
               <span className="dock-btn__icon" aria-hidden>
-                <Icon size={20} strokeWidth={1.75} />
+                <DockIcon icon={Icon} />
               </span>
               <span className="dock-btn__label">{label}</span>
             </NavLink>
@@ -54,7 +59,9 @@ export function Shell({ children, title, badge = 'Privacy-preserving · E3', led
         <div className="shell-main">
           <header className="shell-topbar">
             <Link to="/" className="shell-topbar__brand" aria-label="Go to home">
-              <span className="brand__mark brand__mark--sm">IF</span>
+              <span className="brand__mark brand__mark--sm" aria-hidden>
+                <GlassIcon icon={NavIcons.home} size={18} />
+              </span>
               <span className="shell-topbar__brand-text">Education survey</span>
             </Link>
             <div className="shell-topbar__actions">
