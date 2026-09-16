@@ -170,11 +170,11 @@ export async function generateSurveyFoldProof(args: {
   onStatus?: StatusFn
 }): Promise<SurveyFoldProofResult> {
   const { value, publicKey, respondent, questionIndex, kind, onStatus } = args
-  const preset = SEPOLIA.thresholdBfvParamsPresetName
-  if (
-    preset !== 'SECURE_THRESHOLD_8192' &&
-    preset !== 'INSECURE_THRESHOLD_512'
-  ) {
+  // Widen so a future preset change is a runtime error, not an always-false compare.
+  const preset = SEPOLIA.thresholdBfvParamsPresetName as
+    | 'INSECURE_THRESHOLD_512'
+    | 'SECURE_THRESHOLD_8192'
+  if (preset !== 'SECURE_THRESHOLD_8192' && preset !== 'INSECURE_THRESHOLD_512') {
     throw new Error(`Unsupported BFV preset for survey fold: ${preset}`)
   }
   const status = onStatus ?? (() => {})
