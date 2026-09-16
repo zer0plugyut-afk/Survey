@@ -1,0 +1,23 @@
+# Education survey — Vite SPA in web/
+# Set these in the Netlify UI (they are baked in at build time):
+#   VITE_SEPOLIA_RPC_URL
+#   VITE_E3_PROGRAM_ADDRESS
+#   VITE_SURVEY_ADMIN_ADDRESS
+#   VITE_WALLETCONNECT_PROJECT_ID
+#   VITE_SUPABASE_URL
+#   VITE_SUPABASE_ANON_KEY
+
+[build]
+  base = "web"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# React Router paths (/create, /respond, /submit)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
